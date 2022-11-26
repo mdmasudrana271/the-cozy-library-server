@@ -29,6 +29,7 @@ function verifyJWT(req, res, next){
             return res.status(403).send({message: 'forbidden access'})
         }
         req.decoded = decoded;
+        console.log()
         next()
     })
 }
@@ -40,6 +41,7 @@ async function run(){
         const productsCollection = client.db('the-cozy-library').collection("products")
         const categoryCollection = client.db('the-cozy-library').collection("categories")
         const bookingCollection = client.db('the-cozy-library').collection("booking")
+        const advertiseCollection = client.db('the-cozy-library').collection("advertise")
 
 
         const verifyAdmin = async(req, res, next)=>{
@@ -53,10 +55,11 @@ async function run(){
             next()
         }
         const verifySeller = async(req, res, next)=>{
-            console.log(req.decoded.email)
+            console.log('hello',req.decoded.email)
             const decodedEmail = req.decoded.email;
             const query = {email: decodedEmail}
             const user = await usersCollection.findOne(query)
+            console.log(user)
             if(user.role !== 'Seller'){
                 return res.status(403).send({message: 'forbidden access'})
             }
@@ -82,7 +85,7 @@ async function run(){
             res.send(result)
         })
 
-        app.post('/products',verifyJWT, async(req, res)=>{
+        app.post('/products',verifyJWT,verifySeller, async(req, res)=>{
             const product = req.body;
             const result = await productsCollection.insertOne(product)
             res.send(result)
@@ -92,6 +95,14 @@ async function run(){
             const order = req.body;
             const result = await bookingCollection.insertOne(order)
             res.send(result)
+        })
+
+        app.post('/advertise',verifyJWT,verifySeller, async(req, res)=>{
+            
+            const product = req.body;
+            const result = await advertiseCollection.insertOne(product)
+            res.send(result)
+
         })
 
         app.get('/users/admin/:email',verifyJWT, async (req, res) => {
@@ -119,7 +130,7 @@ async function run(){
             res.send(categories)
         })
        
-        app.get('/products', async(req, res)=>{
+        app.get('/products',verifyJWT, async(req, res)=>{
             const id = req.query.id;
             const category = await categoryCollection.findOne({_id: ObjectId(id)})
             const data = await productsCollection.find({category: category.name}).toArray()
@@ -129,25 +140,32 @@ async function run(){
 
         app.get('/my-products',verifyJWT,verifySeller, async(req, res)=>{
             const email = req.query.email;
-            console.log(email)
             const query = {email: email}
             const result = await productsCollection.find(query).sort({$natural: -1 }).toArray()
             res.send(result)
         })
 
-        app.get('/orders', async(req, res)=>{
+        app.get('/orders',verifyJWT, async(req, res)=>{
             const email = req.query.email;
             const query = {email: email}
             const result = await bookingCollection.find(query).sort({$natural: -1 }).toArray()
             res.send(result)
         })
 
-        app.get('/users/seller',verifyJWT,verifyAdmin, async (req, res) => {
+        app.get('/ads-products', verifyJWT, async(req, res)=>{
+            const query = {}
+            const result = await advertiseCollection.find(query).sort({$natural: -1 }).toArray()
+            res.send(result)
+        })
+
+        app.get('/seller',verifyJWT,verifyAdmin, async (req, res) => {
             const query = { }
             const users = await usersCollection.find(query).toArray();
             const result = users.filter(user=> user.role === 'Seller')
             res.send(result);
         })
+
+
 
     }
     finally{
