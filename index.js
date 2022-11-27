@@ -78,6 +78,12 @@ async function run(){
             res.status(403).send({accessToken:''})
         })
 
+        // app.post('/jwt', (req, res) =>{
+        //     const user = req.body;
+        //     const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d'})
+        //     res.send({token})
+        // })
+
 
         app.post('/users', async(req, res)=>{
             const user = req.body;
@@ -105,24 +111,24 @@ async function run(){
 
         })
 
-        app.get('/users/admin/:email',verifyJWT, async (req, res) => {
+        app.get('/users/admin/:email', async (req, res) => {
             const email = req.params.email;
             const query = { email }
             const user = await usersCollection.findOne(query);
             res.send({ isAdmin: user?.role === 'Admin' });
         })
-        app.get('/users/seller/:email',verifyJWT, async (req, res) => {
+        app.get('/users/seller/:email', async (req, res) => {
             const email = req.params.email;
             const query = { email }
             const user = await usersCollection.findOne(query);
             res.send({ isSeller: user?.role === 'Seller' });
         })
-        app.get('/users/buyer/:email',verifyJWT, async (req, res) => {
-            const email = req.params.email;
-            const query = { email }
-            const user = await usersCollection.findOne(query);
-            res.send({ isBuyer: user?.role === 'Buyer'});
-        })
+        // app.get('/users/buyer/:email',verifyJWT, async (req, res) => {
+        //     const email = req.params.email;
+        //     const query = { email }
+        //     const user = await usersCollection.findOne(query);
+        //     res.send({ isBuyer: user?.role === 'Buyer'});
+        // })
 
         app.get('/category', async(req, res)=>{
             const query = {}
@@ -159,9 +165,15 @@ async function run(){
         })
 
         app.get('/seller',verifyJWT,verifyAdmin, async (req, res) => {
-            const query = { }
+            const query = {}
             const users = await usersCollection.find(query).toArray();
             const result = users.filter(user=> user.role === 'Seller')
+            res.send(result);
+        })
+        app.get('/buyers',verifyJWT,verifyAdmin, async (req, res) => {
+            const query = {}
+            const users = await usersCollection.find(query).toArray();
+            const result = users.filter(user=> user.role === 'Buyer')
             res.send(result);
         })
 
