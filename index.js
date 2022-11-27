@@ -29,7 +29,6 @@ function verifyJWT(req, res, next){
             return res.status(403).send({message: 'forbidden access'})
         }
         req.decoded = decoded;
-        console.log()
         next()
     })
 }
@@ -41,11 +40,9 @@ async function run(){
         const productsCollection = client.db('the-cozy-library').collection("products")
         const categoryCollection = client.db('the-cozy-library').collection("categories")
         const bookingCollection = client.db('the-cozy-library').collection("booking")
-        const advertiseCollection = client.db('the-cozy-library').collection("advertise")
 
 
         const verifyAdmin = async(req, res, next)=>{
-            console.log(req.decoded.email)
             const decodedEmail = req.decoded.email;
             const query = {email: decodedEmail}
             const user = await usersCollection.findOne(query)
@@ -55,11 +52,9 @@ async function run(){
             next()
         }
         const verifySeller = async(req, res, next)=>{
-            console.log('hello',req.decoded.email)
             const decodedEmail = req.decoded.email;
             const query = {email: decodedEmail}
             const user = await usersCollection.findOne(query)
-            console.log(user)
             if(user.role !== 'Seller'){
                 return res.status(403).send({message: 'forbidden access'})
             }
@@ -103,11 +98,18 @@ async function run(){
             res.send(result)
         })
 
-        app.post('/advertise',verifyJWT,verifySeller, async(req, res)=>{
+        app.patch('/advertise/:id',verifyJWT,verifySeller, async(req, res)=>{
             
-            const product = req.body;
-            const result = await advertiseCollection.insertOne(product)
-            res.send(result)
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) }
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    advertise: 'true'
+                }
+            }
+            const result = await productsCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
 
         })
 
@@ -136,11 +138,10 @@ async function run(){
             res.send(categories)
         })
        
-        app.get('/products',verifyJWT, async(req, res)=>{
+        app.get('/products', async(req, res)=>{
             const id = req.query.id;
             const category = await categoryCollection.findOne({_id: ObjectId(id)})
             const data = await productsCollection.find({category: category.name}).toArray()
-            
             res.send(data)
         })
 
@@ -150,20 +151,26 @@ async function run(){
             const result = await productsCollection.find(query).sort({$natural: -1 }).toArray()
             res.send(result)
         })
+        app.delete('/my-products/:id', verifyJWT, verifySeller, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await productsCollection.deleteOne(filter);
+            res.send(result);
+        })
 
-        app.get('/orders',verifyJWT, async(req, res)=>{
+
+        app.get('/my-orders',verifyJWT, async(req, res)=>{
             const email = req.query.email;
             const query = {email: email}
             const result = await bookingCollection.find(query).sort({$natural: -1 }).toArray()
             res.send(result)
         })
 
-        app.get('/ads-products', verifyJWT, async(req, res)=>{
-            const query = {}
-            const result = await advertiseCollection.find(query).sort({$natural: -1 }).toArray()
+        app.get('/ads-products', async(req, res)=>{
+            const query = {advertise: 'true'}
+            const result = await productsCollection.find(query).sort({$natural: -1 }).toArray()
             res.send(result)
         })
-
         app.get('/seller',verifyJWT,verifyAdmin, async (req, res) => {
             const query = {}
             const users = await usersCollection.find(query).toArray();
