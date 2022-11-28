@@ -39,18 +39,11 @@ function verifyJWT(req, res, next) {
 async function run() {
   try {
     const usersCollection = client.db("the-cozy-library").collection("users");
-    const productsCollection = client
-      .db("the-cozy-library")
-      .collection("products");
-    const categoryCollection = client
-      .db("the-cozy-library")
-      .collection("categories");
-    const bookingCollection = client
-      .db("the-cozy-library")
-      .collection("booking");
-    const paymentsCollection = client
-      .db("the-cozy-library")
-      .collection("payments");
+    const productsCollection = client.db("the-cozy-library").collection("products");
+    const categoryCollection = client.db("the-cozy-library").collection("categories");
+    const bookingCollection = client.db("the-cozy-library").collection("booking");
+    const paymentsCollection = client.db("the-cozy-library").collection("payments");
+    const reportedCollection = client.db("the-cozy-library").collection("reported");
 
     const verifyAdmin = async (req, res, next) => {
       const decodedEmail = req.decoded.email;
@@ -135,6 +128,25 @@ async function run() {
       res.send(result);
     });
 
+    app.post('/report-product', verifyJWT, async(req, res)=>{
+        const product = req.body;
+      const result = await reportedCollection.insertOne(product);
+      res.send(result);
+    })
+
+    app.get('/report-product', verifyJWT, verifyAdmin, async(req, res)=>{
+        const query = {}
+        const result = await reportedCollection.find(query).toArray();
+        res.send(result)
+    })
+
+    app.delete('/report-products/:id', verifyJWT, verifyAdmin, async(req, res)=>{
+        const id = req.body.id;
+        const filter = {_id: ObjectId(id) };
+        const result = await productsCollection.deleteOne(filter);
+        res.send(result);
+    })
+
     app.patch("/advertise/:id", verifyJWT, verifySeller, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
@@ -199,6 +211,7 @@ async function run() {
       const user = await usersCollection.findOne(query);
       res.send({ isAdmin: user?.role === "Admin" });
     });
+
     app.get("/users/seller/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email };
@@ -230,11 +243,9 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
     app.delete(
-      "/my-products/:id",
-      verifyJWT,
-      verifySeller,
-      async (req, res) => {
+      "/my-products/:id", verifyJWT,  verifySeller,  async (req, res) => {
         const id = req.params.id;
         const filter = { _id: ObjectId(id) };
         const result = await productsCollection.deleteOne(filter);
@@ -265,6 +276,7 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
     app.get("/my-orders/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
@@ -280,12 +292,14 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
     app.get("/seller", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
       const users = await usersCollection.find(query).toArray();
       const result = users.filter((user) => user.role === "Seller");
       res.send(result);
     });
+
     app.get("/buyers", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
       const users = await usersCollection.find(query).toArray();
@@ -293,7 +307,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/user-status", async (req, res) => {
+    app.get("/user-status",verifyJWT, async (req, res) => {
       const name = req.query.name;
       const query = { name: name };
       const result = await usersCollection.findOne(query);
