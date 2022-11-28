@@ -4,6 +4,9 @@ const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 require('dotenv').config()
+
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
 const app = express();
 
 // middleware 
@@ -40,6 +43,7 @@ async function run(){
         const productsCollection = client.db('the-cozy-library').collection("products")
         const categoryCollection = client.db('the-cozy-library').collection("categories")
         const bookingCollection = client.db('the-cozy-library').collection("booking")
+        const paymentsCollection = client.db('the-cozy-library').collection('payments');
 
 
         const verifyAdmin = async(req, res, next)=>{
@@ -60,6 +64,41 @@ async function run(){
             }
             next()
         }
+
+
+
+        app.post('/create-payment-intent',verifyJWT, async (req, res) => {
+            const booking = req.body;
+            const price = booking.price;
+            const amount = price * 100;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                currency: 'usd',
+                amount: amount,
+                "payment_method_types": [
+                    "card"
+                ]
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+        });
+
+
+        app.post('/payments', async (req, res) =>{
+            const payment = req.body;
+            const result = await paymentsCollection.insertOne(payment);
+            const id = payment.bookingId
+            const filter = {_id: ObjectId(id)}
+            const updatedDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId
+                }
+            }
+            const updatedResult = await bookingCollection.updateOne(filter, updatedDoc)
+            res.send(result);
+        })
 
 
         app.get('/jwt', async(req, res)=>{
@@ -113,6 +152,33 @@ async function run(){
 
         })
 
+
+        app.patch('/products/:id',verifyJWT, async(req, res)=>{
+            const id = req.params.id;
+            const filter = {_id: ObjectId(id)}
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    status: 'Sold'
+                }
+            }
+            const result = await productsCollection.updateOne(filter, updatedDoc, options);
+            res.send(result)
+        })
+
+        app.patch('/verify-seller/:id',verifyJWT, verifyAdmin, async(req, res)=>{
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) }
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    verified: 'true'
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        })
+
         app.get('/users/admin/:email', async (req, res) => {
             const email = req.params.email;
             const query = { email }
@@ -158,11 +224,31 @@ async function run(){
             res.send(result);
         })
 
+        app.delete('/my-seller/:id', verifyJWT, verifyAdmin, async(req, res)=>{
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await usersCollection.deleteOne(filter);
+            res.send(result);
+        })
+
+        app.delete('/my-buyer/:id', verifyJWT, verifyAdmin, async(req, res)=>{
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await usersCollection.deleteOne(filter);
+            res.send(result);
+        })
+
 
         app.get('/my-orders',verifyJWT, async(req, res)=>{
             const email = req.query.email;
             const query = {email: email}
             const result = await bookingCollection.find(query).sort({$natural: -1 }).toArray()
+            res.send(result)
+        })
+        app.get('/my-orders/:id', async(req, res)=>{
+            const id = req.params.id;
+            const query = {_id: ObjectId(id)}
+            const result = await bookingCollection.findOne(query)
             res.send(result)
         })
 
