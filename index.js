@@ -153,9 +153,9 @@ async function run(){
         })
 
 
-        app.patch('/products/:id',verifyJWT, async(req, res)=>{
-            const id = req.params.id;
-            const filter = {_id: ObjectId(id)}
+        app.patch('/products/:product',verifyJWT, async(req, res)=>{
+            const name = req.params.product;
+            const filter = {name: name}
             const options = { upsert: true };
             const updatedDoc = {
                 $set: {
@@ -164,6 +164,7 @@ async function run(){
             }
             const result = await productsCollection.updateOne(filter, updatedDoc, options);
             res.send(result)
+            console.log(filter)
         })
 
         app.patch('/verify-seller/:id',verifyJWT, verifyAdmin, async(req, res)=>{
