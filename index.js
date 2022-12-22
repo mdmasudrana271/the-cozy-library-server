@@ -140,12 +140,12 @@ async function run() {
         res.send(result)
     })
 
-    app.delete('/report-products/:id', verifyJWT, verifyAdmin, async(req, res)=>{
-        const id = req.body.id;
-        const filter = {_id: ObjectId(id) };
+    app.delete("/report-product/:id", verifyJWT, verifyAdmin, async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: ObjectId(id) };
         const result = await productsCollection.deleteOne(filter);
         res.send(result);
-    })
+      });
 
     app.patch("/advertise/:id", verifyJWT, verifySeller, async (req, res) => {
       const id = req.params.id;
@@ -228,19 +228,14 @@ async function run() {
     app.get("/products", async (req, res) => {
       const id = req.query.id;
       const category = await categoryCollection.findOne({ _id: ObjectId(id) });
-      const data = await productsCollection
-        .find({ category: category.name })
-        .toArray();
+      const data = await productsCollection.find({ category: category.name }).toArray();
       res.send(data);
     });
 
     app.get("/my-products", verifyJWT, verifySeller, async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
-      const result = await productsCollection
-        .find(query)
-        .sort({ $natural: -1 })
-        .toArray();
+      const result = await productsCollection.find(query).sort({ $natural: -1 }).toArray();
       res.send(result);
     });
 
@@ -270,10 +265,7 @@ async function run() {
     app.get("/my-orders", verifyJWT, async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
-      const result = await bookingCollection
-        .find(query)
-        .sort({ $natural: -1 })
-        .toArray();
+      const result = await bookingCollection.find(query).sort({ $natural: -1 }).toArray();
       res.send(result);
     });
 
@@ -286,10 +278,7 @@ async function run() {
 
     app.get("/ads-products", async (req, res) => {
       const query = { advertise: "true" };
-      const result = await productsCollection
-        .find(query)
-        .sort({ $natural: -1 })
-        .toArray();
+      const result = await productsCollection.find(query).sort({ $natural: -1 }).toArray();
       res.send(result);
     });
 
