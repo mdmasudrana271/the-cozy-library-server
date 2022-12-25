@@ -44,6 +44,7 @@ async function run() {
     const bookingCollection = client.db("the-cozy-library").collection("booking");
     const paymentsCollection = client.db("the-cozy-library").collection("payments");
     const reportedCollection = client.db("the-cozy-library").collection("reported");
+    const authorsCollection = client.db("the-cozy-library").collection("authors");
 
     const verifyAdmin = async (req, res, next) => {
       const decodedEmail = req.decoded.email;
@@ -294,6 +295,17 @@ async function run() {
       const users = await usersCollection.find(query).toArray();
       const result = users.filter((user) => user.role === "Buyer");
       res.send(result);
+    });
+    app.get("/customers", async (req, res) => {
+      const query = {};
+      const users = await usersCollection.find(query).toArray();
+      const result = users.filter((user) => user.role === "Buyer");
+      res.send(result);
+    });
+    app.get("/authors", async (req, res) => {
+      const query = {};
+      const users = await authorsCollection.find(query).toArray();
+      res.send(users);
     });
 
     app.get("/user-status",verifyJWT, async (req, res) => {
