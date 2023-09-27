@@ -300,7 +300,6 @@ async function run() {
       const query = {};
       const users = await usersCollection.find(query).toArray();
       const result = users.filter((user) => user.role === "Buyer").slice(0, 4);
-      console.log(result)
       res.send(result);
     });
     app.get("/authors", async (req, res) => {
