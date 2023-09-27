@@ -299,7 +299,7 @@ async function run() {
     app.get("/customers", async (req, res) => {
       const query = {};
       const users = await usersCollection.find(query).toArray();
-      const result = users.filter((user) => user.role === "Buyer").slice(0, 4);
+      const result = users.filter((user) => user.role === "Buyer").slice(0, 8);
       res.send(result);
     });
     app.get("/authors", async (req, res) => {
